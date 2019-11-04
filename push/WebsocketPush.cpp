@@ -27,11 +27,6 @@ void CWebSocketPush::Start()
 
 void CWebSocketPush::Stop()
 {
-	if (!isStarted) {
-		return;
-	}
-	isStarted = false;
-	ClearListenTable();
 	if (m_sConnection.connected()) {
 		m_sConnection.disconnect();
 	}
@@ -41,6 +36,14 @@ void CWebSocketPush::Stop()
 	if (m_sSceneChanged.connected()) {
 		m_sSceneChanged.disconnect();
 	}
+
+	std::unique_lock<std::mutex> lock(socketMutex);
+
+	if (!isStarted) {
+		return;
+	}
+	isStarted = false;
+	ClearListenTable();
 }
 
 void CWebSocketPush::ListenTo(const unsigned long long DeviceRowIdx)
@@ -106,6 +109,7 @@ bool CWebSocketPush::WeListenTo(const unsigned long long DeviceRowIdx)
 
 void CWebSocketPush::OnDeviceReceived(const int m_HwdID, const unsigned long long DeviceRowIdx, const std::string &DeviceName, const unsigned char *pRXCommand)
 {
+	std::unique_lock<std::mutex> lock(socketMutex);
 	if (!isStarted) {
 		return;
 	}
@@ -118,6 +122,7 @@ void CWebSocketPush::OnDeviceReceived(const int m_HwdID, const unsigned long lon
 
 void CWebSocketPush::OnSceneChange(const unsigned long long SceneRowIdx, const std::string& SceneName)
 {
+	std::unique_lock<std::mutex> lock(socketMutex);
 	if (!isStarted) {
 		return;
 	}
@@ -126,6 +131,7 @@ void CWebSocketPush::OnSceneChange(const unsigned long long SceneRowIdx, const s
 
 void CWebSocketPush::OnNotificationReceived(const std::string & Subject, const std::string & Text, const std::string & ExtraData, const int Priority, const std::string & Sound, const bool bFromNotification)
 {
+	std::unique_lock<std::mutex> lock(socketMutex);
 	if (!isStarted) {
 		return;
 	}

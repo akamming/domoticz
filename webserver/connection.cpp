@@ -496,6 +496,7 @@ namespace http {
 			std::unique_lock<std::mutex> lock(writeMutex);
 			write_buffer.clear();
 			write_in_progress = false;
+			bool stopConnection = false;
 			if (!error) {
 				if (!writeQ.empty()) {
 					std::string buf = writeQ.front();
@@ -503,7 +504,7 @@ namespace http {
 					SocketWrite(buf);
 				}
 				else if (!keepalive_) {
-					connection_manager_.stop(shared_from_this());
+					stopConnection = true;
 				}
 			}
 			if (!error && keepalive_) {
@@ -512,6 +513,12 @@ namespace http {
 				reset_abandoned_timeout();
 			}
 			else {
+				_log.Log(LOG_ERROR, "connection::handle_write Error: %s", error.message().c_str());
+				stopConnection = true;
+			}
+
+			lock.unlock();
+			if (stopConnection) {
 				connection_manager_.stop(shared_from_this());
 			}
 		}
