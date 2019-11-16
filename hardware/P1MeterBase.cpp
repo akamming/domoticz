@@ -388,7 +388,7 @@ bool P1MeterBase::MatchLine()
 			{
 				strcpy(value, vString.substr(0, ePos).c_str());
 #ifdef _DEBUG
-				_log.Log(LOG_NORM, "P1 Smart Meter: Key: %s, Value: %s", t->topic, value);
+				//_log.Log(LOG_NORM, "P1 Smart Meter: Key: %s, Value: %s", t->topic, value);
 #endif
 			}
 
@@ -570,7 +570,7 @@ bool P1MeterBase::MatchLine()
 				vString = (const char*)& l_buffer + 11;
 				m_gastimestamp = vString.substr(0, 13);
 #ifdef _DEBUG
-				_log.Log(LOG_NORM, "P1 Smart Meter: Key: gastimestamp, Value: %s", m_gastimestamp.c_str());
+				//_log.Log(LOG_NORM, "P1 Smart Meter: Key: gastimestamp, Value: %s", m_gastimestamp.c_str());
 #endif
 			}
 		}
