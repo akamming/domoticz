@@ -20,6 +20,8 @@ void CWebSocketPush::Start()
 	if (isStarted) {
 		return;
 	}
+	_log.Log(LOG_NORM, "CWebSocketPush::Start");
+
 	m_sConnection = m_mainworker.sOnDeviceReceived.connect(boost::bind(&CWebSocketPush::OnDeviceReceived, this, _1, _2, _3, _4));
 	m_sNotification = sOnNotificationReceived.connect(boost::bind(&CWebSocketPush::OnNotificationReceived, this, _1, _2, _3, _4, _5, _6));
 	m_sSceneChanged = m_mainworker.sOnSwitchScene.connect(boost::bind(&CWebSocketPush::OnSceneChange, this, _1, _2));
@@ -37,6 +39,7 @@ void CWebSocketPush::Stop()
 		_log.Log(LOG_ERROR, "CWebSocketPush::Stop Whoops. Trying to stop, while a event is handeld. Just prevented a crash. All OK now....");
 		lock.lock();
 	}
+	_log.Log(LOG_NORM, "CWebSocketPush::Stop");
 
 	if (m_sConnection.connected())
 		m_sConnection.disconnect();

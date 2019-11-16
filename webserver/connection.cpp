@@ -134,6 +134,7 @@ namespace http {
 				break;
 			case connection_websocket_closing:
 				// todo: wait for writeQ to flush, so client can receive the close frame
+				_log.Log(LOG_NORM, "connection::stop Handling empty connection_websocket_closing");
 				break;
 			}
 			// Cancel timers
@@ -477,6 +478,7 @@ namespace http {
 						else {
 							// a connection close control packet was received
 							// todo: wait for writeQ to flush?
+							_log.Log(LOG_NORM, "connection::handle_read Setting connection_type = connection_websocket_closing");
 							connection_type = connection_websocket_closing;
 						}
 					}
@@ -489,9 +491,14 @@ namespace http {
 			}
 			else if (error == boost::asio::error::eof)
 			{
+				_log.Log(LOG_NORM, "connection::handle_read Finished reading");
 				connection_manager_.stop(shared_from_this());
 			}
-			else if (error != boost::asio::error::operation_aborted)
+			else if (error == boost::asio::error::operation_aborted)
+			{
+				_log.Log(LOG_NORM, "connection::handle_read Aborted");
+			}
+			else
 			{
 				_log.Log(LOG_ERROR, "connection::handle_read Error: %s", error.message().c_str());
 				connection_manager_.stop(shared_from_this());
@@ -579,9 +586,14 @@ namespace http {
 			}
 			else if (!error)
 			{
+				_log.Log(LOG_NORM, "connection::handle_read_timeout ");
 				connection_manager_.stop(shared_from_this());
 			}
-			else if (error != boost::asio::error::operation_aborted)
+			else if (error == boost::asio::error::operation_aborted)
+			{
+				//_log.Log(LOG_NORM, "connection::handle_read_timeout Aborted"); // Excessive logging
+			}
+			else
 			{
 				_log.Log(LOG_ERROR, "connection::handle_read_timeout Error: %s", error.message().c_str());
 				connection_manager_.stop(shared_from_this());
@@ -625,6 +637,7 @@ namespace http {
 				{
 					websocket_parser.Stop();
 				}
+				_log.Log(LOG_ERROR, "connection::handle_abandoned_timeout Error: %s", error.message().c_str());
 				connection_manager_.stop(shared_from_this());
 			}
 		}
