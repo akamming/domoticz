@@ -128,13 +128,9 @@ namespace http {
 		{
 			switch (connection_type) {
 			case connection_websocket:
-				// todo: send close frame and wait for writeQ to flush
-				//websocket_parser.SendClose("");
+			case connection_websocket_closing
+        _log.Log(LOG_NORM, "connection::stop Handling empty connection_websocket_closing");
 				websocket_parser.Stop();
-				break;
-			case connection_websocket_closing:
-				// todo: wait for writeQ to flush, so client can receive the close frame
-				_log.Log(LOG_NORM, "connection::stop Handling empty connection_websocket_closing");
 				break;
 			}
 			// Cancel timers
@@ -480,6 +476,7 @@ namespace http {
 							// todo: wait for writeQ to flush?
 							_log.Log(LOG_NORM, "connection::handle_read Setting connection_type = connection_websocket_closing");
 							connection_type = connection_websocket_closing;
+							connection_manager_.stop(shared_from_this());
 						}
 					}
 					else // if (!result)
