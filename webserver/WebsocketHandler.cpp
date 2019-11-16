@@ -7,6 +7,9 @@
 #include "cWebem.h"
 #include "../main/Logger.h"
 
+#include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
+
 #define WEBSOCKET_SESSION_TIMEOUT 86400 // 1 day
 
 namespace http {
@@ -18,16 +21,16 @@ namespace http {
 			MyWrite(_MyWrite),
 			myWebem(pWebem)
 		{
-			uint32_t threadid = GetCurrentThreadId();
-			uint32_t thispointer = (uint32_t)this;
-			_log.Log(LOG_NORM, "CWebsocketHandler Constructor thread:%X  this:%X", threadid, thispointer);
+			std::string threadid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+			uint32_t thispointer = (uint32_t) this;
+			_log.Log(LOG_NORM, "CWebsocketHandler Constructor thread:%s  this:%X", threadid.c_str(), thispointer);
 		}
 
 		CWebsocketHandler::~CWebsocketHandler()
 		{
-			uint32_t threadid = GetCurrentThreadId();
+			std::string threadid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
 			uint32_t thispointer = (uint32_t)this;
-			_log.Log(LOG_NORM, "CWebsocketHandler Destructor thread:%X  this:%X", threadid, thispointer);
+			_log.Log(LOG_NORM, "CWebsocketHandler Destructor thread:%s  this:%X", threadid.c_str(), thispointer);
 			Stop();
 		}
 
