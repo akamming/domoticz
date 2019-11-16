@@ -496,22 +496,34 @@ namespace http {
 			std::unique_lock<std::mutex> lock(writeMutex);
 			write_buffer.clear();
 			write_in_progress = false;
-			if (!error) {
-				if (!writeQ.empty()) {
-					std::string buf = writeQ.front();
-					writeQ.pop_front();
-					SocketWrite(buf);
-				}
-				else if (!keepalive_) {
-					connection_manager_.stop(shared_from_this());
-				}
+			bool stopConnection = false;
+			if (error)
+			{
+				_log.Log(LOG_ERROR, "connection::handle_write Error: %s", error.message().c_str());
+				stopConnection = true;
 			}
-			if (!error && keepalive_) {
+			else if (!writeQ.empty())
+			{
+				std::string buf = writeQ.front();
+				writeQ.pop_front();
+				SocketWrite(buf);
+				if (keepalive_)
+					reset_abandoned_timeout();
+			}
+			else if (keepalive_)
+			{
 				status_ = ENDING_WRITE;
-				// if a keep-alive connection is requested, we read the next request
 				reset_abandoned_timeout();
 			}
-			else {
+			else
+			{
+				_log.Log(LOG_NORM, "connection::handle_write Write done, but no queue or keepalive");
+				stopConnection = true;
+			}
+
+			lock.unlock();
+			if (stopConnection) 
+			{
 				connection_manager_.stop(shared_from_this());
 			}
 		}
