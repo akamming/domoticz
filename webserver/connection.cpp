@@ -602,9 +602,6 @@ namespace http {
 
 		/// schedule abandoned timeout timer
 		void connection::set_abandoned_timeout() {
-			if (connection_type == connection_websocket)
-				return; //disabled for now
-
 			abandoned_timer_.expires_from_now(boost::posix_time::seconds(default_abandoned_timeout_));
 			abandoned_timer_.async_wait(boost::bind(&connection::handle_abandoned_timeout, shared_from_this(), boost::asio::placeholders::error));
 		}
@@ -633,11 +630,6 @@ namespace http {
 		void connection::handle_abandoned_timeout(const boost::system::error_code& error) {
 			if (error != boost::asio::error::operation_aborted) {
 				_log.Log(LOG_STATUS, "%s -> handle abandoned timeout (status=%d)", host_endpoint_address_.c_str(), status_);
-				if (connection_type==connection_websocket)
-				{
-					websocket_parser.Stop();
-				}
-				_log.Log(LOG_ERROR, "connection::handle_abandoned_timeout Error: %s", error.message().c_str());
 				connection_manager_.stop(shared_from_this());
 			}
 		}
