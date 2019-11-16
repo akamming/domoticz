@@ -2,6 +2,7 @@
 #include "WebsocketPush.h"
 #include "../webserver/WebsocketHandler.h"
 #include "../main/mainworker.h"
+#include "../main/Logger.h"
 
 extern boost::signals2::signal<void(const std::string &Subject, const std::string &Text, const std::string &ExtraData, const int Priority, const std::string & Sound, const bool bFromNotification)> sOnNotificationReceived;
 
@@ -19,6 +20,8 @@ void CWebSocketPush::Start()
 	if (isStarted) {
 		return;
 	}
+	_log.Log(LOG_NORM, "CWebSocketPush::Start");
+
 	m_sConnection = m_mainworker.sOnDeviceReceived.connect(boost::bind(&CWebSocketPush::OnDeviceReceived, this, _1, _2, _3, _4));
 	m_sNotification = sOnNotificationReceived.connect(boost::bind(&CWebSocketPush::OnNotificationReceived, this, _1, _2, _3, _4, _5, _6));
 	m_sSceneChanged = m_mainworker.sOnSwitchScene.connect(boost::bind(&CWebSocketPush::OnSceneChange, this, _1, _2));
@@ -27,20 +30,28 @@ void CWebSocketPush::Start()
 
 void CWebSocketPush::Stop()
 {
-	if (!isStarted) {
+	if (!isStarted) 
 		return;
+
+	std::unique_lock<std::mutex> lock(socketMutex, std::defer_lock);
+	if (!lock.try_lock())
+	{
+		_log.Log(LOG_ERROR, "CWebSocketPush::Stop Whoops. Trying to stop, while a event is handeld. Just prevented a crash. All OK now....");
+		lock.lock();
 	}
+	_log.Log(LOG_NORM, "CWebSocketPush::Stop");
+
+	if (m_sConnection.connected())
+		m_sConnection.disconnect();
+
+	if (m_sNotification.connected())
+		m_sNotification.disconnect();
+
+	if (m_sSceneChanged.connected())
+		m_sSceneChanged.disconnect();
+
 	isStarted = false;
 	ClearListenTable();
-	if (m_sConnection.connected()) {
-		m_sConnection.disconnect();
-	}
-	if (m_sNotification.connected()) {
-		m_sNotification.disconnect();
-	}
-	if (m_sSceneChanged.connected()) {
-		m_sSceneChanged.disconnect();
-	}
 }
 
 void CWebSocketPush::ListenTo(const unsigned long long DeviceRowIdx)
@@ -106,7 +117,10 @@ bool CWebSocketPush::WeListenTo(const unsigned long long DeviceRowIdx)
 
 void CWebSocketPush::OnDeviceReceived(const int m_HwdID, const unsigned long long DeviceRowIdx, const std::string &DeviceName, const unsigned char *pRXCommand)
 {
-	if (!isStarted) {
+	std::unique_lock<std::mutex> lock(socketMutex);
+	if (!isStarted) 
+	{
+		_log.Log(LOG_ERROR, "CWebSocketPush::OnDeviceReceived Whoops. Trying to notify, while class is stopped. Just prevented a crash.....");
 		return;
 	}
 
@@ -118,6 +132,7 @@ void CWebSocketPush::OnDeviceReceived(const int m_HwdID, const unsigned long lon
 
 void CWebSocketPush::OnSceneChange(const unsigned long long SceneRowIdx, const std::string& SceneName)
 {
+	std::unique_lock<std::mutex> lock(socketMutex);
 	if (!isStarted) {
 		return;
 	}
@@ -126,6 +141,7 @@ void CWebSocketPush::OnSceneChange(const unsigned long long SceneRowIdx, const s
 
 void CWebSocketPush::OnNotificationReceived(const std::string & Subject, const std::string & Text, const std::string & ExtraData, const int Priority, const std::string & Sound, const bool bFromNotification)
 {
+	std::unique_lock<std::mutex> lock(socketMutex);
 	if (!isStarted) {
 		return;
 	}

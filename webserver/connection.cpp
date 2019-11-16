@@ -128,7 +128,8 @@ namespace http {
 		{
 			switch (connection_type) {
 			case connection_websocket:
-			case connection_websocket_closing:
+			case connection_websocket_closing
+        _log.Log(LOG_NORM, "connection::stop Handling empty connection_websocket_closing");
 				websocket_parser.Stop();
 				break;
 			}
@@ -184,6 +185,7 @@ namespace http {
 				}
 				else
 				{
+					_log.Log(LOG_ERROR, "connection::handle_handshake Error: %s", error.message().c_str());
 					connection_manager_.stop(shared_from_this());
 				}
 			}
@@ -446,6 +448,7 @@ namespace http {
 					}
 					else if (!result)
 					{
+						_log.Log(LOG_ERROR, "Error parsing http request.");
 						keepalive_ = false;
 						reply_ = reply::stock_reply(reply::bad_request);
 						MyWrite(reply_.to_string(request_.method));
@@ -471,6 +474,7 @@ namespace http {
 						else {
 							// a connection close control packet was received
 							// todo: wait for writeQ to flush?
+							_log.Log(LOG_NORM, "connection::handle_read Setting connection_type = connection_websocket_closing");
 							connection_type = connection_websocket_closing;
 							connection_manager_.stop(shared_from_this());
 						}
@@ -482,8 +486,18 @@ namespace http {
 					break;
 				}
 			}
-			else if (error != boost::asio::error::operation_aborted)
+			else if (error == boost::asio::error::eof)
 			{
+				_log.Log(LOG_NORM, "connection::handle_read Finished reading");
+				connection_manager_.stop(shared_from_this());
+			}
+			else if (error == boost::asio::error::operation_aborted)
+			{
+				_log.Log(LOG_NORM, "connection::handle_read Aborted");
+			}
+			else
+			{
+				_log.Log(LOG_ERROR, "connection::handle_read Error: %s", error.message().c_str());
 				connection_manager_.stop(shared_from_this());
 			}
 		}
@@ -493,22 +507,34 @@ namespace http {
 			std::unique_lock<std::mutex> lock(writeMutex);
 			write_buffer.clear();
 			write_in_progress = false;
-			if (!error) {
-				if (!writeQ.empty()) {
-					std::string buf = writeQ.front();
-					writeQ.pop_front();
-					SocketWrite(buf);
-				}
-				else if (!keepalive_) {
-					connection_manager_.stop(shared_from_this());
-				}
+			bool stopConnection = false;
+			if (error)
+			{
+				_log.Log(LOG_ERROR, "connection::handle_write Error: %s", error.message().c_str());
+				stopConnection = true;
 			}
-			if (!error && keepalive_) {
+			else if (!writeQ.empty())
+			{
+				std::string buf = writeQ.front();
+				writeQ.pop_front();
+				SocketWrite(buf);
+				if (keepalive_)
+					reset_abandoned_timeout();
+			}
+			else if (keepalive_)
+			{
 				status_ = ENDING_WRITE;
-				// if a keep-alive connection is requested, we read the next request
 				reset_abandoned_timeout();
 			}
-			else {
+			else
+			{
+				_log.Log(LOG_NORM, "connection::handle_write Write done, but no queue or keepalive");
+				stopConnection = true;
+			}
+
+			lock.unlock();
+			if (stopConnection) 
+			{
 				connection_manager_.stop(shared_from_this());
 			}
 		}
@@ -555,8 +581,18 @@ namespace http {
 				// For WebSockets that requested keep-alive, use a Server side Ping
 				websocket_parser.SendPing();
 			}
-			else if (error != boost::asio::error::operation_aborted) {
-				//_log.DEBUG(DEBUG_WEBSERVER, "%s -> handle read timeout", host_endpoint_address_.c_str());
+			else if (!error)
+			{
+				_log.Log(LOG_NORM, "connection::handle_read_timeout ");
+				connection_manager_.stop(shared_from_this());
+			}
+			else if (error == boost::asio::error::operation_aborted)
+			{
+				//_log.Log(LOG_NORM, "connection::handle_read_timeout Aborted"); // Excessive logging
+			}
+			else
+			{
+				_log.Log(LOG_ERROR, "connection::handle_read_timeout Error: %s", error.message().c_str());
 				connection_manager_.stop(shared_from_this());
 			}
 		}

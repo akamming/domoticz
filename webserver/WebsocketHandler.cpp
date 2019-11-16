@@ -18,11 +18,16 @@ namespace http {
 			MyWrite(_MyWrite),
 			myWebem(pWebem)
 		{
-			
+			uint32_t threadid = GetCurrentThreadId();
+			uint32_t thispointer = (uint32_t)this;
+			_log.Log(LOG_NORM, "CWebsocketHandler Constructor thread:%X  this:%X", threadid, thispointer);
 		}
 
 		CWebsocketHandler::~CWebsocketHandler()
 		{
+			uint32_t threadid = GetCurrentThreadId();
+			uint32_t thispointer = (uint32_t)this;
+			_log.Log(LOG_NORM, "CWebsocketHandler Destructor thread:%X  this:%X", threadid, thispointer);
 			Stop();
 		}
 
@@ -33,6 +38,11 @@ namespace http {
 
 			try
 			{
+				uint32_t threadid = GetCurrentThreadId();
+				uint32_t thispointer = (uint32_t)this;
+				//_log.Log(LOG_NORM, "CWebsocketHandler Handle thread:%X  this:%X", threadid, thispointer); // Excessive logging
+
+
 				// WebSockets only do security during set up so keep pushing the expiry out to stop it being cleaned up
 				WebEmSession session;
 				std::map<std::string, WebEmSession>::iterator itt = myWebem->m_sessions.find(sessionid);
@@ -81,6 +91,7 @@ namespace http {
 						jsonValue["requestid"] = reqID;
 						jsonValue["data"] = rep.content;
 						std::string response = writer.write(jsonValue);
+						//Sleep(16000);
 						MyWrite(response);
 						return true;
 					}
