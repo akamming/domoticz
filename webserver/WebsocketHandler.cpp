@@ -204,6 +204,7 @@ namespace http {
 			catch (std::exception& e)
 			{
 				_log.Log(LOG_ERROR, "WebsocketHandler::%s Exception: %s", __func__, e.what());
+				_log.Log(LOG_ERROR, "Error information: %s", boost::current_exception_diagnostic_information());
 			}
 		}
 
@@ -223,6 +224,7 @@ namespace http {
 			catch (std::exception& e)
 			{
 				_log.Log(LOG_ERROR, "WebsocketHandler::%s Exception: %s", __func__, e.what());
+				_log.Log(LOG_ERROR, "Error information: %s", boost::current_exception_diagnostic_information());
 			}
 		}
 

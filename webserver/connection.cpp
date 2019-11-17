@@ -114,8 +114,8 @@ namespace http {
 				status_ = WAITING_HANDSHAKE;
 				// with ssl, we first need to complete the handshake before reading
 				sslsocket_->async_handshake(boost::asio::ssl::stream_base::server,
-					boost::bind(&connection::handle_handshake, shared_from_this(),
-						boost::asio::placeholders::error));
+						boost::bind(&connection::handle_handshake, shared_from_this(),
+							boost::asio::placeholders::error));
 #endif
 			}
 			else {
@@ -127,11 +127,11 @@ namespace http {
 		void connection::stop()
 		{
 			switch (connection_type) {
-			case connection_websocket:
-			case connection_websocket_closing
-        _log.Log(LOG_NORM, "connection::stop Handling empty connection_websocket_closing");
-				websocket_parser.Stop();
-				break;
+				case connection_websocket:
+				case connection_websocket_closing:
+					_log.Log(LOG_NORM, "connection::stop Handling empty connection_websocket_closing");
+					websocket_parser.Stop();
+					break;
 			}
 			// Cancel timers
 			cancel_abandoned_timeout();
@@ -140,7 +140,7 @@ namespace http {
 			// Initiate graceful connection closure.
 			boost::system::error_code ignored_ec;
 			socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec); // @note For portable behaviour with respect to graceful closure of a
-																						// connected socket, call shutdown() before closing the socket.
+			// connected socket, call shutdown() before closing the socket.
 			socket().close();
 		}
 
@@ -148,27 +148,27 @@ namespace http {
 		{
 			if (error != boost::asio::error::operation_aborted) {
 				switch (connection_type) {
-				case connection_http:
-					// Timers should be cancelled before stopping to remove tasks from the io_service.
-					// The io_service will stop naturally when every tasks are removed.
-					// If timers are not cancelled, the exception ERROR_ABANDONED_WAIT_0 is thrown up to the io_service::run() caller.
-					cancel_abandoned_timeout();
-					cancel_read_timeout();
+					case connection_http:
+						// Timers should be cancelled before stopping to remove tasks from the io_service.
+						// The io_service will stop naturally when every tasks are removed.
+						// If timers are not cancelled, the exception ERROR_ABANDONED_WAIT_0 is thrown up to the io_service::run() caller.
+						cancel_abandoned_timeout();
+						cancel_read_timeout();
 
-					try {
-						// Initiate graceful connection closure.
-						boost::system::error_code ignored_ec;
-						socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec); // @note For portable behaviour with respect to graceful closure of a
-																									// connected socket, call shutdown() before closing the socket.
-						socket().close(ignored_ec);
-					}
-					catch (...) {
-						_log.Log(LOG_ERROR, "%s -> exception thrown while stopping connection", host_endpoint_address_.c_str());
-					}
-					break;
-				case connection_websocket:
-					websocket_parser.SendPing();
-					break;
+						try {
+							// Initiate graceful connection closure.
+							boost::system::error_code ignored_ec;
+							socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec); // @note For portable behaviour with respect to graceful closure of a
+							// connected socket, call shutdown() before closing the socket.
+							socket().close(ignored_ec);
+						}
+						catch (...) {
+							_log.Log(LOG_ERROR, "%s -> exception thrown while stopping connection", host_endpoint_address_.c_str());
+						}
+						break;
+					case connection_websocket:
+						websocket_parser.SendPing();
+						break;
 				}
 			}
 		}
@@ -206,17 +206,17 @@ namespace http {
 #ifdef WWW_ENABLE_SSL
 				// Perform secure read
 				sslsocket_->async_read_some(buf,
-					boost::bind(&connection::handle_read, shared_from_this(),
-						boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred));
+						boost::bind(&connection::handle_read, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred));
 #endif
 			}
 			else {
 				// Perform plain read
 				socket_->async_read_some(buf,
-					boost::bind(&connection::handle_read, shared_from_this(),
-						boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred));
+						boost::bind(&connection::handle_read, shared_from_this(),
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred));
 			}
 		}
 
@@ -247,18 +247,18 @@ namespace http {
 		void connection::MyWrite(const std::string& buf)
 		{
 			switch (connection_type) {
-			case connection_http:
-			case connection_websocket:
-				// we dont send data anymore in websocket closing state
-				std::unique_lock<std::mutex> lock(writeMutex);
-				if (write_in_progress) {
-					// write in progress, add to queue
-					writeQ.push_back(buf);
-				}
-				else {
-					SocketWrite(buf);
-				}
-				break;
+				case connection_http:
+				case connection_websocket:
+					// we dont send data anymore in websocket closing state
+					std::unique_lock<std::mutex> lock(writeMutex);
+					if (write_in_progress) {
+						// write in progress, add to queue
+						writeQ.push_back(buf);
+					}
+					else {
+						SocketWrite(buf);
+					}
+					break;
 			}
 		}
 
@@ -325,9 +325,9 @@ namespace http {
 				std::string file_extension = filename.substr(last_dot_pos + 1);
 				std::string mime_type = mime_types::extension_to_type(file_extension);
 				if ((mime_type.find("text/") != std::string::npos) ||
-					(mime_type.find("/xml") != std::string::npos) ||
-					(mime_type.find("/javascript") != std::string::npos) ||
-					(mime_type.find("/json") != std::string::npos)) {
+						(mime_type.find("/xml") != std::string::npos) ||
+						(mime_type.find("/javascript") != std::string::npos) ||
+						(mime_type.find("/json") != std::string::npos)) {
 					// Add charset on text content
 					mime_type += ";charset=UTF-8";
 				}
@@ -375,115 +375,115 @@ namespace http {
 
 				switch (connection_type)
 				{
-				case connection_http:
-					begin = boost::asio::buffer_cast<const char*>(_buf.data());
-					try
-					{
-						request_parser_.reset();
-						boost::tie(result, boost::tuples::ignore) = request_parser_.parse(
-							request_, begin, begin + _buf.size());
-					}
-					catch (...)
-					{
-						_log.Log(LOG_ERROR, "Exception parsing http request.");
-					}
-
-					if (result) {
-						size_t sizeread = begin - boost::asio::buffer_cast<const char*>(_buf.data());
-						_buf.consume(sizeread);
-						reply_.reset();
-						const char* pConnection = request_.get_req_header(&request_, "Connection");
-						keepalive_ = pConnection != NULL && boost::iequals(pConnection, "Keep-Alive");
-						request_.keep_alive = keepalive_;
-						request_.host_address = host_endpoint_address_;
-						request_.host_port = host_endpoint_port_;
-						if (request_.host_address.substr(0, 7) == "::ffff:") {
-							request_.host_address = request_.host_address.substr(7);
+					case connection_http:
+						begin = boost::asio::buffer_cast<const char*>(_buf.data());
+						try
+						{
+							request_parser_.reset();
+							boost::tie(result, boost::tuples::ignore) = request_parser_.parse(
+									request_, begin, begin + _buf.size());
 						}
-						request_handler_.handle_request(request_, reply_);
-
-						if (reply_.status == reply::switching_protocols) {
-							// this was an upgrade request
-							connection_type = connection_websocket;
-							// from now on we are a persistant connection
-							keepalive_ = true;
-							websocket_parser.Start();
-							websocket_parser.GetHandler()->store_session_id(request_, reply_);
-							// todo: check if multiple connection from the same client in CONNECTING state?
+						catch (...)
+						{
+							_log.Log(LOG_ERROR, "Exception parsing http request.");
 						}
-						else if (reply_.status == reply::download_file) {
-							std::string filename_attachment = reply_.content;
-							size_t npos = filename_attachment.find("\r\n");
-							if (npos == std::string::npos)
-							{
-								reply_ = reply::stock_reply(reply::internal_server_error);
+
+						if (result) {
+							size_t sizeread = begin - boost::asio::buffer_cast<const char*>(_buf.data());
+							_buf.consume(sizeread);
+							reply_.reset();
+							const char* pConnection = request_.get_req_header(&request_, "Connection");
+							keepalive_ = pConnection != NULL && boost::iequals(pConnection, "Keep-Alive");
+							request_.keep_alive = keepalive_;
+							request_.host_address = host_endpoint_address_;
+							request_.host_port = host_endpoint_port_;
+							if (request_.host_address.substr(0, 7) == "::ffff:") {
+								request_.host_address = request_.host_address.substr(7);
 							}
-							else
-							{
-								std::string filename = filename_attachment.substr(0, npos);
-								std::string attachment = filename_attachment.substr(npos + 2);
-								if (send_file(filename, attachment, reply_))
-									return;
+							request_handler_.handle_request(request_, reply_);
+
+							if (reply_.status == reply::switching_protocols) {
+								// this was an upgrade request
+								connection_type = connection_websocket;
+								// from now on we are a persistant connection
+								keepalive_ = true;
+								websocket_parser.Start();
+								websocket_parser.GetHandler()->store_session_id(request_, reply_);
+								// todo: check if multiple connection from the same client in CONNECTING state?
+							}
+							else if (reply_.status == reply::download_file) {
+								std::string filename_attachment = reply_.content;
+								size_t npos = filename_attachment.find("\r\n");
+								if (npos == std::string::npos)
+								{
+									reply_ = reply::stock_reply(reply::internal_server_error);
+								}
+								else
+								{
+									std::string filename = filename_attachment.substr(0, npos);
+									std::string attachment = filename_attachment.substr(npos + 2);
+									if (send_file(filename, attachment, reply_))
+										return;
+								}
+							}
+
+							if (request_.keep_alive && ((reply_.status == reply::ok) || (reply_.status == reply::no_content) || (reply_.status == reply::not_modified))) {
+								// Allows request handler to override the header (but it should not)
+								reply::add_header_if_absent(&reply_, "Connection", "Keep-Alive");
+								std::stringstream ss;
+								ss << "max=" << default_max_requests_ << ", timeout=" << read_timeout_;
+								reply::add_header_if_absent(&reply_, "Keep-Alive", ss.str());
+							}
+
+							MyWrite(reply_.to_string(request_.method));
+							if (reply_.status == reply::switching_protocols) {
+								// this was an upgrade request, set this value after MyWrite to allow the 101 response to go out
+								connection_type = connection_websocket;
+							}
+
+							if (keepalive_) {
+								read_more();
+							}
+							status_ = WAITING_WRITE;
+						}
+						else if (!result)
+						{
+							_log.Log(LOG_ERROR, "Error parsing http request.");
+							keepalive_ = false;
+							reply_ = reply::stock_reply(reply::bad_request);
+							MyWrite(reply_.to_string(request_.method));
+							if (keepalive_) {
+								read_more();
 							}
 						}
-
-						if (request_.keep_alive && ((reply_.status == reply::ok) || (reply_.status == reply::no_content) || (reply_.status == reply::not_modified))) {
-							// Allows request handler to override the header (but it should not)
-							reply::add_header_if_absent(&reply_, "Connection", "Keep-Alive");
-							std::stringstream ss;
-							ss << "max=" << default_max_requests_ << ", timeout=" << read_timeout_;
-							reply::add_header_if_absent(&reply_, "Keep-Alive", ss.str());
-						}
-
-						MyWrite(reply_.to_string(request_.method));
-						if (reply_.status == reply::switching_protocols) {
-							// this was an upgrade request, set this value after MyWrite to allow the 101 response to go out
-							connection_type = connection_websocket;
-						}
-
-						if (keepalive_) {
+						else
+						{
 							read_more();
 						}
-						status_ = WAITING_WRITE;
-					}
-					else if (!result)
-					{
-						_log.Log(LOG_ERROR, "Error parsing http request.");
-						keepalive_ = false;
-						reply_ = reply::stock_reply(reply::bad_request);
-						MyWrite(reply_.to_string(request_.method));
-						if (keepalive_) {
+						break;
+					case connection_websocket:
+					case connection_websocket_closing:
+						begin = boost::asio::buffer_cast<const char*>(_buf.data());
+						result = websocket_parser.parse((const unsigned char*)begin, _buf.size(), bytes_consumed, keepalive_);
+						_buf.consume(bytes_consumed);
+						if (result) {
+							// we received a complete packet (that was handled already)
+							if (keepalive_) {
+								read_more();
+							}
+							else {
+								// a connection close control packet was received
+								// todo: wait for writeQ to flush?
+								_log.Log(LOG_NORM, "connection::handle_read Setting connection_type = connection_websocket_closing");
+								connection_type = connection_websocket_closing;
+								connection_manager_.stop(shared_from_this());
+							}
+						}
+						else // if (!result)
+						{
 							read_more();
 						}
-					}
-					else
-					{
-						read_more();
-					}
-					break;
-				case connection_websocket:
-				case connection_websocket_closing:
-					begin = boost::asio::buffer_cast<const char*>(_buf.data());
-					result = websocket_parser.parse((const unsigned char*)begin, _buf.size(), bytes_consumed, keepalive_);
-					_buf.consume(bytes_consumed);
-					if (result) {
-						// we received a complete packet (that was handled already)
-						if (keepalive_) {
-							read_more();
-						}
-						else {
-							// a connection close control packet was received
-							// todo: wait for writeQ to flush?
-							_log.Log(LOG_NORM, "connection::handle_read Setting connection_type = connection_websocket_closing");
-							connection_type = connection_websocket_closing;
-							connection_manager_.stop(shared_from_this());
-						}
-					}
-					else // if (!result)
-					{
-						read_more();
-					}
-					break;
+						break;
 				}
 			}
 			else if (error == boost::asio::error::eof)
