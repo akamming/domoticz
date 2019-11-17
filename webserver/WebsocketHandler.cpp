@@ -41,9 +41,9 @@ namespace http {
 
 			try
 			{
-				uint32_t threadid = GetCurrentThreadId();
-				uint32_t thispointer = (uint32_t)this;
-				//_log.Log(LOG_NORM, "CWebsocketHandler Handle thread:%X  this:%X", threadid, thispointer); // Excessive logging
+				//std::string threadid = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+				//uint32_t thispointer = (uint32_t)this;
+				//_log.Log(LOG_NORM, "CWebsocketHandler Handle thread:%s  this:%X", threadid.c_str(), thispointer); // Excessive logging
 
 
 				// WebSockets only do security during set up so keep pushing the expiry out to stop it being cleaned up
